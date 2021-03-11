@@ -18,50 +18,37 @@ package com.example.android.mobileperf.battery;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.BatteryManager;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
+import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ImageView;
-import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.android.mobileperf.battery.databinding.ActivityPowerBinding;
 
 
-public class WaitForPowerActivity extends ActionBarActivity {
+public class WaitForPowerActivity extends AppCompatActivity {
+
     public static final String LOG_TAG = "WaitForPowerActivity";
-
-    TextView mPowerMsg;
-    ImageView mCheyennePic;
+    private ActivityPowerBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_power);
+        binding = ActivityPowerBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        mPowerMsg = (TextView) findViewById(R.id.cheyenne_txt);
-        mCheyennePic = (ImageView) findViewById(R.id.cheyenne_img);
+        binding.powerTakePhoto.setText(R.string.take_photo_button);
 
-        Button theButtonThatTakesPhotos = (Button) findViewById(R.id.power_take_photo);
-        theButtonThatTakesPhotos.setText(R.string.take_photo_button);
+        binding.powerApplyFilter.setText(R.string.filter_photo_button);
 
-        final Button theButtonThatFiltersThePhoto = (Button) findViewById(R.id.power_apply_filter);
-        theButtonThatFiltersThePhoto.setText(R.string.filter_photo_button);
-
-        theButtonThatTakesPhotos.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                takePhoto();
-                // After we take the photo, we should display the filter option.
-                theButtonThatFiltersThePhoto.setVisibility(View.VISIBLE);
-            }
+        binding.powerTakePhoto.setOnClickListener(v -> {
+            takePhoto();
+            // After we take the photo, we should display the filter option.
+            binding.powerApplyFilter.setVisibility(View.VISIBLE);
         });
 
-        theButtonThatFiltersThePhoto.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                applyFilter();
-            }
-        });
+        binding.powerApplyFilter.setOnClickListener(v -> applyFilter());
     }
 
     /**
@@ -77,19 +64,18 @@ public class WaitForPowerActivity extends ActionBarActivity {
      */
     private void takePhoto() {
         // Make photo of Cheyenne appear.
-        mPowerMsg.setText(R.string.photo_taken);
-        mCheyennePic.setImageResource(R.drawable.cheyenne);
+        binding.cheyenneTxt.setText(R.string.photo_taken);
+        binding.cheyenneImg.setImageResource(R.drawable.cheyenne);
     }
 
     private void applyFilter() {
         // If not plugged in, wait to apply the filter.
-        if (!checkForPower()) {
-            mPowerMsg.setText(R.string.waiting_for_power);
-            return;
-        }
-
-        mCheyennePic.setImageResource(R.drawable.pink_cheyenne);
-        mPowerMsg.setText(R.string.photo_filter);
+        boolean isPow = checkForPower();
+        Log.i(LOG_TAG, "checkForPower = " + isPow);
+        if (isPow) {
+            binding.cheyenneImg.setImageResource(R.drawable.pink_cheyenne);
+            binding.cheyenneTxt.setText(R.string.photo_filter);
+        } else binding.cheyenneTxt.setText(R.string.waiting_for_power);
     }
 
     /**
@@ -107,10 +93,7 @@ public class WaitForPowerActivity extends ActionBarActivity {
         int chargePlug = batteryStatus.getIntExtra(BatteryManager.EXTRA_PLUGGED, -1);
         boolean usbCharge = (chargePlug == BatteryManager.BATTERY_PLUGGED_USB);
         boolean acCharge = (chargePlug == BatteryManager.BATTERY_PLUGGED_AC);
-        boolean wirelessCharge = false;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            wirelessCharge = (chargePlug == BatteryManager.BATTERY_PLUGGED_WIRELESS);
-        }
+        boolean wirelessCharge = (chargePlug == BatteryManager.BATTERY_PLUGGED_WIRELESS);
         return (usbCharge || acCharge || wirelessCharge);
     }
 }

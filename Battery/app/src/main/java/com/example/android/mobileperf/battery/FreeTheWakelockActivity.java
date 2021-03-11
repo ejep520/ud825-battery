@@ -21,37 +21,31 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.android.mobileperf.battery.databinding.ActivityWakelockBinding;
 
 
-public class FreeTheWakelockActivity extends ActionBarActivity {
+public class FreeTheWakelockActivity extends AppCompatActivity {
     public static final String LOG_TAG = "FreeTheWakelockActivity";
 
-    TextView mWakeLockMsg;
-    ComponentName mServiceComponent;
+    private ComponentName mServiceComponent;
+    private ActivityWakelockBinding binding;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_wakelock);
+        binding = ActivityWakelockBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        mWakeLockMsg = (TextView) findViewById(R.id.wakelock_txt);
         mServiceComponent = new ComponentName(this, MyJobService.class);
         Intent startServiceIntent = new Intent(this, MyJobService.class);
         startService(startServiceIntent);
 
-        Button theButtonThatWakelocks = (Button) findViewById(R.id.wakelock_poll);
-        theButtonThatWakelocks.setText(R.string.poll_server_button);
+        binding.wakelockPoll.setText(R.string.poll_server_button);
 
-        theButtonThatWakelocks.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                    pollServer();
-            }
-        });
+        binding.wakelockPoll.setOnClickListener(v -> pollServer());
     }
 
     /**
@@ -80,7 +74,7 @@ public class FreeTheWakelockActivity extends ActionBarActivity {
                     .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY) // WiFi or data connections
                     .build();
 
-            mWakeLockMsg.append("Scheduling job " + i + "!\n");
+            binding.wakelockTxt.append("Scheduling job " + i + "!\n");
             scheduler.schedule(jobInfo);
         }
     }

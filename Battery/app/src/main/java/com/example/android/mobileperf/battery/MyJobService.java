@@ -19,16 +19,20 @@ import android.app.job.JobParameters;
 import android.app.job.JobService;
 import android.content.Context;
 import android.net.ConnectivityManager;
-import android.net.NetworkInfo;
-import android.os.AsyncTask;
 import android.util.Log;
 
-import java.io.IOException;
+import androidx.annotation.NonNull;
+
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
 
 public class MyJobService extends JobService {
     private static final String LOG_TAG = "MyJobService";
@@ -46,7 +50,7 @@ public class MyJobService extends JobService {
     }
 
     @Override
-    public boolean onStartJob(JobParameters params) {
+    public boolean onStartJob(@NonNull JobParameters params) {
         // This is where you would implement all of the logic for your job. Note that this runs
         // on the main thread, so you will want to use a separate thread for asynchronous work
         // (as we demonstrate below to establish a network connection).
@@ -56,7 +60,15 @@ public class MyJobService extends JobService {
         Log.i(LOG_TAG, "Totally and completely working on job " + params.getJobId());
         // First, check the network, and then attempt to connect.
         if (isNetworkConnected()) {
-            new SimpleDownloadTask() .execute(params);
+            SimplerDownloadTask task = new SimplerDownloadTask(params);
+            FutureTask<String> futureString = new FutureTask<>(task);
+            Executor executor = Executors.newSingleThreadExecutor();
+            executor.execute(futureString);
+            try {
+                Log.i(LOG_TAG, futureString.get());
+            } catch (Exception err) {
+                err.printStackTrace();
+            }
             return true;
         } else {
             Log.i(LOG_TAG, "No connection on job " + params.getJobId() + "; sad face");
@@ -65,7 +77,7 @@ public class MyJobService extends JobService {
     }
 
     @Override
-    public boolean onStopJob(JobParameters params) {
+    public boolean onStopJob(@NonNull JobParameters params) {
         // Called if the job must be stopped before jobFinished() has been called. This may
         // happen if the requirements are no longer being met, such as the user no longer
         // connecting to WiFi, or the device no longer being idle. Use this callback to resolve
@@ -83,8 +95,7 @@ public class MyJobService extends JobService {
     private boolean isNetworkConnected() {
         ConnectivityManager connectivityManager =
                 (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
-        return (networkInfo != null && networkInfo.isConnected());
+        return connectivityManager.getActiveNetwork() != null;
     }
 
     /**
@@ -93,46 +104,45 @@ public class MyJobService extends JobService {
      *  The InputStream is then converted to a String, which is logged by the
      *  onPostExecute() method.
      */
-    private class SimpleDownloadTask extends AsyncTask<JobParameters, Void, String> {
 
-        protected JobParameters mJobParam;
+    private static class SimplerDownloadTask implements Callable<String> {
 
-        @Override
-        protected String doInBackground(JobParameters... params) {
-            // cache system provided job requirements
-            mJobParam = params[0];
-            try {
-                InputStream is = null;
-                // Only display the first 50 characters of the retrieved web page content.
-                int len = 50;
+        @SuppressWarnings("FieldCanBeLocal")
+        private JobParameters mJobParams;
 
-                URL url = new URL("https://www.google.com");
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setReadTimeout(10000); //10sec
-                conn.setConnectTimeout(15000); //15sec
-                conn.setRequestMethod("GET");
-                //Starts the query
-                conn.connect();
-                int response = conn.getResponseCode();
-                Log.d(LOG_TAG, "The response is: " + response);
-                is = conn.getInputStream();
-
-                // Convert the input stream to a string
-                Reader reader = null;
-                reader = new InputStreamReader(is, "UTF-8");
-                char[] buffer = new char[len];
-                reader.read(buffer);
-                return new String(buffer);
-
-            } catch (IOException e) {
-                return "Unable to retrieve web page.";
-            }
+        public SimplerDownloadTask(@NonNull JobParameters... params) {
+            mJobParams = params[0];
         }
 
         @Override
-        protected void onPostExecute(String result) {
-            jobFinished(mJobParam, false);
-            Log.i(LOG_TAG, result);
+        public String call() {
+            InputStream inputStream;
+            Reader reader;
+            final int length = 50;
+            char[] buffer = new char[length];
+            final int readTimeout = 10000;
+            final int connectTimeout = 15000;
+            final String requestType = "GET";
+            int response, readCount;
+            try {
+                URL url = new URL("https://www.google.com/");
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setReadTimeout(readTimeout);
+                connection.setConnectTimeout(connectTimeout);
+                connection.setRequestMethod(requestType);
+                connection.connect();
+                response = connection.getResponseCode();
+                Log.d(LOG_TAG, "The response is: " + response);
+                inputStream = connection.getInputStream();
+                reader = new InputStreamReader(inputStream, StandardCharsets.UTF_8.name());
+                readCount = reader.read(buffer);
+                if (readCount != length) Log.w(LOG_TAG, "Read count was " + readCount);
+                inputStream.close();
+                connection.disconnect();
+            } catch (Exception err) {
+                err.printStackTrace();
+            }
+            return new String(buffer);
         }
     }
 }

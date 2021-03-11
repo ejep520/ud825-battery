@@ -17,35 +17,38 @@ package com.example.android.mobileperf.battery;
 
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.v7.app.ActionBarActivity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.android.mobileperf.battery.databinding.ActivityMainBinding;
 
 /**
  * Just a "Table of Contents" Activity to springboard you into the various exercises.  Seriously,
  * there is NOTHING interesting here.  Why are you still reading?  Why didn't you learn in
  * Lesson 2??? We expected better.
  */
-public class MainActivity extends ActionBarActivity {
+public class MainActivity extends AppCompatActivity {
+
+    private ActivityMainBinding binding;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        ViewGroup rootView = (ViewGroup) findViewById(R.id.main_rootview);
+        binding = ActivityMainBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
 
-        addButton(WaitForPowerActivity.class, "Battery-heavy is no good", rootView);
-        addButton(FreeTheWakelockActivity.class, "Release the wakelock!", rootView);
+        addButton(WaitForPowerActivity.class, "Battery-heavy is no good", binding.mainRootview);
+        addButton(FreeTheWakelockActivity.class, "Release the wakelock!", binding.mainRootview);
     }
 
-    public void addButton(final Class destination, String description, ViewGroup parent) {
+    public void addButton(final Class<?> destination, String description, ViewGroup parent) {
         Button button = new Button(this);
-        button.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                Intent problemIntent = new Intent(MainActivity.this, destination);
-                startActivity(problemIntent);
-            }
+        button.setOnClickListener(v -> {
+            Intent problemIntent = new Intent(MainActivity.this, destination);
+            startActivity(problemIntent);
         });
 
         button.setText(description);
