@@ -69,10 +69,10 @@ public class MyJobService extends JobService {
             } catch (Exception err) {
                 err.printStackTrace();
             }
+            jobFinished(params, false);
             return true;
-        } else {
-            Log.i(LOG_TAG, "No connection on job " + params.getJobId() + "; sad face");
         }
+        Log.i(LOG_TAG, "No connection on job " + params.getJobId() + "; sad face");
         return false;
     }
 
